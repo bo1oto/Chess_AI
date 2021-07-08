@@ -19,7 +19,6 @@ module BvsB =
             let mas = readFromJSON<float[][]> (pos_val_path num)
             create_2DArray mas 8
         let king_num = if color then 4 else 20 
-        //Проверка на трансформированных пешек
         for i in 0..31 do 
             if figures.[i].figure = Figure.Pawn && figures.[i].state = MoveFeature.Transform then 
                 correct_mas_on_Tpawn_w weights_rnn pos_val num (int figures.[i].figure - 1) i
@@ -53,7 +52,6 @@ module BvsB =
                 (PartyState.Dead, (MoveInfo.Default, -1))
             else 
                 (PartyState.Draw, (MoveInfo.Default, -1))
-    //Функция, управляющая партией
     let rec bvb_game (state: PartyState) (whose_move: bool) (count: byte) ((num_1, num_2): (byte * byte)) =
         match state with
         | PartyState.Play -> 
@@ -76,7 +74,7 @@ module BvsB =
             (count, 1uy, (MoveInfo.Default, -1))
     
 module PvsB = 
-    //Обновить параметры
+    //Update parameters
     let init_game () = 
         refresh_pos()
         weights_rnn_pvb <- readFromJSON<float[][][]> (weights_rnn_path bot_num)
@@ -95,7 +93,6 @@ module PvsB =
         let pos_info = create_position_info figures
         let king_num = if color then 4 else 20
 
-        //Проверка на трансформированных пешек
         for i in 0..31 do 
             if figures.[i].figure = Figure.Pawn && figures.[i].state = MoveFeature.Transform then 
                 correct_mas_on_Tpawn_w weights_rnn_pvb pos_val_pvb bot_num (int figures.[i].figure - 1) i
@@ -142,7 +139,7 @@ module PvsB =
         writeToJson pvb_errors_path er_mas
 
     let rec pvb_game (move_info: MoveInfo) (id: int) (whose_move: bool) (count: byte) =
-        //Обрабатываем ход игрока
+        //Processing the player's move
         let state = 
             if not (id = -1) then
                 let figures = readFromJSON<FigureData[]> pos_path
@@ -157,7 +154,7 @@ module PvsB =
                 change_log move_info figures.[id].figure figures.[id].position (if whose_move then 20 else 4) count (not whose_move) chah_iden
             else PartyState.Play
         let count_next = if whose_move then count else count + 1uy
-        //Передача хода боту
+        //Transferring turn to bot
         match state with
         | PartyState.Play -> 
             let iden = get_move_pvb whose_move count
