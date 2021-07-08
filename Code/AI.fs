@@ -7,12 +7,12 @@ open ServiceCode.Service
 open ServiceCode.ChessFunc
 
 module Computing = 
-    //Функция активации - гиперболический тангенс
+    //Activation function - hyperbolic tangent
     let inline a_func_ht x = (Math.Exp(x) - Math.Exp(-x)) / (Math.Exp(x) + Math.Exp(-x))
     let inline d_a_func_ht x = 1.0 - x**2.0
 
-    //Первый слой
-    //Выход первого слоя - value фигуры, исходя из имеющихся на поле фигур
+    //First layer
+    //The output of the first layer is the value of the figure, based on the figures available on the field
     let neurons_1_output (mas_s : bool[]) (mas_w : float[][]) : float[] =  
         [|
             for i in 0..31 -> 
@@ -21,15 +21,15 @@ module Computing =
                 |] 
                 |> Seq.sum |> a_func_ht         
         |]
-    //Второй слой
-    //Выход второго слоя - value позиции фигуры, взвешенное по первому слою
+    //Second layer
+    //The output of the second layer is the value of the figure's position, weighted by the first layer
     let neurons_2_output (pos_val : float[,][]) (n1_o : float[]) (fig_pos : (int * int)[]) =  
         [|
             for i in 0..31 ->
                 n1_o.[i] * pos_val.[i].[fst fig_pos.[i], snd fig_pos.[i]] |> a_func_ht             
         |]
-    //Третий слой
-    //Итоговое value фигуры, исходя из value остальных фигур
+    //Third layer
+    //The final value of the figure, based on the value of the rest of the figures
     let neurons_3_output (n2_o : float[]) (mas_w : float[][]) =  
         [|
             for i in 0..31 ->
@@ -38,8 +38,8 @@ module Computing =
             |]
             |> Seq.sum |> a_func_ht             
         |]
-    //Четвёртый слой
-    //Вычисляет разницу между состояниями до и после возможных ходов   
+    //Fourth layer
+    //Calculates the difference between the states before and after possible moves  
     let neurons_4_output (pos_val : float[,][]) (figure_mas : FigureData[]) (pos_info :PositionInfo[,]) (weights_rnn : float[][][])
         (enemy_color : bool) (n1_o: float[]) (n3_o: float[]) (num: byte) =  
         let (st, en) = if not enemy_color then (0, 15) else (16, 31)
@@ -80,7 +80,7 @@ module Computing =
                     find_best_moves full_mas
                 else full_mas
         else [||]
-    //Оценка хода с точки зрения будущих перспектив
+    //Assessing progress from a future perspective
     let rec try_to_win (cur_depth: byte) (figures: FigureData[]) (weights_rnn: float[][][]) (pos_val: float[,][]) 
         ((value, (info, id)): (float * (MoveInfo * int))) (pos_info :PositionInfo[,]) (e_color: bool) (num: byte) =
         if cur_depth < depth then//начинаем с 1
@@ -164,7 +164,6 @@ module Traininig =
             let mas = readFromJSON<float[][]> errors_path
             [| Array.append mas.[num_1] [|error_1|]; Array.append mas.[num_2] [|error_2|] |]
         writeToJson errors_path er_mas
-    //Обучение
     let train () =
         [|
             for j in 0..1 do
@@ -214,12 +213,12 @@ module Traininig =
             let f_stat = [| for i in figures -> Convert.ToDouble(i.status)|]
             let pos_w_mas = [| for i in 0..31 -> pos_val.[i].[fst f_pos.[i], snd f_pos.[i]] |]
             
-            //скорректировали веса при трансформированной пешке, и сохранили базовые веса
+            //adjusted the weights for the transformed pawn, and kept the base weights
             if stateStorage.[color].isPawnTransform.[w] then
                 for i in 0..31 do
                     if figures.[i].figure = Figure.Pawn && figures.[i].state = MoveFeature.Transform then
                         let fig_num = int figures.[i].figure - 1
-                        //сохранили изменяющиеся веса
+                        //kept changing weights
                         indexes <- indexes @ [i]
                         s_w_rnn_0 <- s_w_rnn_0 @ [w_rnn.[0].[i]]
                         s_w_rnn_1 <- s_w_rnn_1 @ [w_rnn.[1].[i]]
@@ -227,7 +226,7 @@ module Traininig =
                         s_d_w_rnn_1 <- s_d_w_rnn_1 @ [d_w_rnn.[1].[i]]
                         s_pos_val <- s_pos_val @ [pos_val.[i]]
                         s_d_pos_val <- s_d_pos_val @ [d_pos_val.[i]]
-                        //изменили необходимые веса на пешечные
+                        //changed the required weights to pawn weights
                         Array.set w_rnn.[0] i pt_w_rnn.[0].[fig_num].[i]
                         Array.set w_rnn.[1] i pt_w_rnn.[1].[fig_num].[i]
                         Array.set d_w_rnn.[0] i d_pt_w_rnn.[0].[fig_num].[i]
@@ -238,16 +237,13 @@ module Traininig =
                 [| 
                     for i in n2_o -> d_out * i
                 |]
-            //изменение веса
             let d_w_1 = 
                 [|
                     for i in 0..31 -> [| for j in 0..31 -> learning_rate * grad_out.[j] + moment * d_w_rnn.[1].[i].[j] |]
                 |]
             for i in 0..31 do
                 for j in 0..31 do
-                    //зафиксировали изменение
                     Array.set d_w_rnn.[1].[i] j d_w_1.[i].[j]
-                    //изменили вес
                     Array.set w_rnn.[1].[i] j (w_rnn.[1].[i].[j] + d_w_1.[i].[j])
     
             let delta_h_1 = 
@@ -258,15 +254,12 @@ module Traininig =
                 [| 
                     for i in 0..31 -> n2_o.[i] * delta_h_1.[i]
                 |]
-            //изменение веса
             let d_w_pv = 
                 [|
                     for i in 0..31 -> learning_rate * grad_h_1.[i] + moment * d_pos_val.[i].[fst f_pos.[i], snd f_pos.[i]]
                 |]
             for i in 0..31 do
-                //зафиксировали изменение
                 Array2D.set d_pos_val.[i] (fst f_pos.[i]) (snd f_pos.[i]) d_w_pv.[i]
-                //изменили вес
                 Array2D.set pos_val.[i] (fst f_pos.[i]) (snd f_pos.[i]) (pos_w_mas.[i] + d_w_pv.[i])
             
             let delta_h_2 = 
@@ -279,22 +272,18 @@ module Traininig =
                         [| 
                             for j in f_stat -> delta_h_2.[i] * Convert.ToDouble(n1_o.[i]) |]
                 |]
-            //изменение веса
             let d_w_0 = 
                 [|
                     for i in 0..31 -> [| for j in 0..31 -> learning_rate * grad_h_2.[i].[j] + moment * d_w_rnn.[0].[i].[j] |]
                 |]
             for i in 0..31 do
                 for j in 0..31 do   
-                    //зафиксировали изменение
                     Array.set d_w_rnn.[0].[i] j d_w_0.[i].[j]
-                    //изменили вес
                     Array.set w_rnn.[0].[i] j (w_rnn.[0].[i].[j] + d_w_0.[i].[j])
-            //тут нужно вернуть всё на свои места
             if stateStorage.[color].isPawnTransform.[w] then
                 for i in indexes do
                     let fig_num = int figures.[i].figure - 1
-                    //записали посчитанные изменённые веса в пешечные веса
+                    //recorded the calculated modified weights in pawn weights
                     Array.set pt_w_rnn.[0].[fig_num] i w_rnn.[0].[i]
                     Array.set pt_w_rnn.[1].[fig_num] i w_rnn.[1].[i]
                     Array.set d_pt_w_rnn.[0].[fig_num] i d_w_rnn.[0].[i]
@@ -302,14 +291,13 @@ module Traininig =
                     Array.set pt_pos_val.[fig_num] i pos_val.[i]
                     Array.set d_pt_pos_val.[fig_num] i d_pos_val.[i]
     
-                    //вернули веса на родину
+                    //returned the weights to their homeland
                     Array.set w_rnn.[0] i s_w_rnn_0.[i]
                     Array.set w_rnn.[1] i s_w_rnn_1.[i]
                     Array.set d_w_rnn.[0] i s_d_w_rnn_0.[i]
                     Array.set d_w_rnn.[1] i s_d_w_rnn_1.[i]
                     Array.set pos_val i s_pos_val.[i]
-                    Array.set d_pos_val i s_d_pos_val.[i] 
-        //записали пешечные веса            
+                    Array.set d_pos_val i s_d_pos_val.[i]           
         writeToJson (pt_weights_rnn_path num) pt_w_rnn
         writeToJson (pt_pos_val_path num) pt_pos_val
         writeToJson (pt_weights_rnn_d_path num) d_pt_w_rnn
