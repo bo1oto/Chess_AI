@@ -6,7 +6,7 @@ open DataTypes
 module JSON_IO = 
     open System.IO
     open FSharp.Json
-    //JSON сериализация/десериализация
+    //JSON serialization / deserialization
     let writeToJson (path: string) (obj: 'a) : unit =
         use sw = new StreamWriter(path)
         let txt = Json.serialize obj
@@ -57,7 +57,7 @@ module Service =
             let sort_mas = Array.sortDescending mas
             sort_mas.[..best_move_count]
         Array.filter (fun x -> Array.contains (fst x) val_arr) val_mas
-    //Начальные данные и веса
+    //Initial data and weights
     let refresh_pos () = 
         let start_pos = 
             let mas = 
@@ -93,7 +93,7 @@ module Service =
         writeToJson pos_path start_pos
         writeToJson move_log_path [||]
     let start () = 
-        // 1 - горизонталь, 2 - вертикаль
+        //1 - horizontal, 2 - vertical
         refresh_pos()
         writeToJson errors_path [| for _ in 1..2 -> [|0.0|]|]
         writeToJson pvb_errors_path [|0.0|]
@@ -181,7 +181,7 @@ module Service =
                 |]
             writeToJson (pt_pos_val_path i) start_pawn_transform_pos_val
             writeToJson (pt_pos_val_d_path i) start_pawn_transform_pos_val_d
-    //Поправка на трансформированных пешек
+    //Correction for transformed pawns
     let correct_mas_on_Tpawn_w (weights_rnn: float[][][]) (pos_val: float[,][]) (num: byte) (fig_id: int) (id: int) = 
         let tp_mas_w = readFromJSON<float[][][][]> (pt_weights_rnn_path num)
         let tp_mas_pv = 
@@ -194,10 +194,6 @@ module Service =
         Array.set weights_rnn.[0] id tp_mas_w.[0].[fig_id].[p_id]
         Array.set weights_rnn.[1] id tp_mas_w.[1].[fig_id].[p_id]
         Array.set pos_val id tp_mas_pv.[fig_id].[p_id]
-    //тут ещё можно выровнять при:
-    //1. рокировке у белого
-    //2. x - занимает 1 символ, -> - два
-    //3. значок ничьи, если она на ходу чёрного может смотреться не очень (хотя хз)
     let change_log (move_info: MoveInfo) (figure: Figure) (position: (int * int)) (king_num: int) (count: byte) (color: bool) (isChah: bool) = 
         let sign = if move_info.id <> -1y then "x" else "->"
         let (f_tag, post_figure) = 
@@ -243,7 +239,7 @@ module Service =
               PartyState.Draw else PartyState.Play
     
 module ChessFunc =
-    //Функции измененения состояния
+    //State change functions
     let change_pos_info (new_pos_info: PositionInfo[,]) ((x, y): (int * int)) (info: MoveInfo) = 
         if new_pos_info.[x, y].figure = Figure.Pawn then
             if new_pos_info.[fst info.move, snd info.move].figure = Figure.Empty && (fst info.move) <> x then
@@ -282,7 +278,7 @@ module ChessFunc =
             if figure_mas.[i].state = MoveFeature.ForwardMove then
                 Array.set figure_mas i { figure_mas.[i] with state = MoveFeature.Simple }
         figure_mas
-    //Функции определения возможных ходов    
+    //Functions for determining possible moves   
     let rec check_fun (pos: (int * int)) (pos_info: PositionInfo[,]) (e_color: bool) (iteration: int) 
         (move_func: int -> int-> (int * int)) (condition: Figure -> int -> bool) = 
         let (x, y) = move_func (fst pos) (snd pos)
@@ -355,7 +351,7 @@ module ChessFunc =
         match figures.[fig_id].figure with
         | Figure.Pawn ->
             let move_direction = if enemy_color then -1 else 1
-            //Ход вперёд
+            //Move forward
             if pos_info.[fst position, snd position + move_direction].figure = Figure.Empty then
                 if figures.[fig_id].state = MoveFeature.Sleep && pos_info.[fst position, snd position + (2 * move_direction)].figure = Figure.Empty then
                     move_list <- fix_insert { MoveInfo.Default with move = (fst position, snd position + (2 * move_direction)); }
@@ -364,7 +360,7 @@ module ChessFunc =
                         move_list <- fix_insert { MoveInfo.Default with move = (fst position, snd position + move_direction); fig_num = i }
                 else
                     move_list <- fix_insert { MoveInfo.Default with move = (fst position, snd position + move_direction); }
-            //Взятие
+            //Take
             if fst position - 1 > -1 then
                 let move = (fst position - 1, snd position + move_direction)
                 if pos_info.[fst move, snd move].figure <> Figure.Empty 
@@ -374,7 +370,7 @@ module ChessFunc =
                         for i in 1y..4y do
                             move_list <- fix_insert { move = figures.[int id].position; id = id; fig_num = i }
                     else move_list <- fix_insert { MoveInfo.Default with move = figures.[int id].position; id = id }
-                //На проходе
+                //En passant
                 if pos_info.[fst position - 1, snd position].figure = Figure.Pawn
                     && pos_info.[fst position - 1, snd position].color = enemy_color then
                     let id = find_id (fst position - 1, snd position)
@@ -389,7 +385,7 @@ module ChessFunc =
                         for i in 1y..4y do
                             move_list <- fix_insert { move = figures.[int id].position; id = id; fig_num = i }
                     else move_list <- fix_insert { MoveInfo.Default with move = figures.[int id].position; id = id }
-                //На проходе
+                //En passant
                 if pos_info.[fst position + 1, snd position].figure = Figure.Pawn 
                     && pos_info.[fst position + 1, snd position].color = enemy_color then
                     let id = find_id (fst position + 1, snd position)
@@ -448,7 +444,7 @@ module ChessFunc =
                     if pos_info.[fst move, snd move].color = enemy_color then
                         move_list <- fix_insert { MoveInfo.Default with move = move; id = find_id move }
                 else move_list <- fix_insert { MoveInfo.Default with move = move }
-            //проверка на рокировку
+            //castling check
             if figures.[fig_id].state = MoveFeature.Sleep && not (check_shah pos_info (fst position, snd position) enemy_color) then
                 let s_pos = if enemy_color then 7 else 0
                 let (r_num_1, r_num_2) = if enemy_color then (16, 23) else (0, 7)
