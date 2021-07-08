@@ -158,7 +158,6 @@ namespace Chess_AI_AI_UI
             int move_id = -1;
             for (int i = 0, count = full_moves.Count; i < count; i++)
             {
-                //тут нужно вспомнить, что для превращения 4 хода с одинаковой позицией + правильный порядок фигур
                 if (full_moves[i].move.Item1 + full_moves[i].move.Item2 * 8 == cell_id)
                 {
                     move_id = i;
@@ -167,14 +166,14 @@ namespace Chess_AI_AI_UI
             }
             if (move_id != -1)
             {
-                //Если идёт атака
+                //If there is an attack
                 if (full_moves[move_id].id != -1)
                 {
                     fig_canvas.Children[full_moves[move_id].id].Visibility = Visibility.Hidden;
                 }
                 if (full_moves[move_id].fig_num != -1)
                 {
-                    //Рокировка
+                    //Castling
                     if (full_moves[move_id].fig_num == 0)
                     {
                         (int r1, int r2, int cell) = start_color ? (0, 7, 0) : (16, 23, 7);
@@ -190,7 +189,7 @@ namespace Chess_AI_AI_UI
                         }
 
                     }
-                    //Трансформация пешки
+                    //Pawn transformation
                     else
                     {
                         main_canvas.IsHitTestVisible = false;
@@ -248,7 +247,7 @@ namespace Chess_AI_AI_UI
 
         private void PassMove(int move_id)
         {
-            //Передали свой ход и получили ход бота
+            //Transferred their turn and received the bot's turn
             Tuple<byte, byte, Tuple<DataTypes.MoveInfo, int>> result; 
             if (move_id != -1)
             {
@@ -262,16 +261,15 @@ namespace Chess_AI_AI_UI
             move_count = result.Item1;
             if (result.Item2 != 0)
             {
-                //тут соответственно разговор про ничью и победу
                 PvsB.calculate_pvb_statistics(!start_color, move_count); 
                 if (result.Item2 == 1)
                 {
-                    string name = result.Item3.Item2 == 32 ? "Победил AI_1!" : "Вы победили!";
+                    string name = result.Item3.Item2 == 32 ? "AI_1 win!" : "You win!";
                     text.Text = name;
                 }
                 else
                 {
-                    text.Text = "Боевая ничья!";
+                    text.Text = "Combat draw!";
                 }
             }
             selected_image = (Image)fig_canvas.Children[result.Item3.Item2];
@@ -282,7 +280,7 @@ namespace Chess_AI_AI_UI
             }
             if (result.Item3.Item1.fig_num != -1)
             {
-                //Рокировка
+                //Castling
                 if (result.Item3.Item1.fig_num == 0)
                 {
                     (int r1, int r2, int cell) = start_color ? (16, 23, 7) : (0, 7, 0);
@@ -298,7 +296,7 @@ namespace Chess_AI_AI_UI
                     }
 
                 }
-                //Трансформация пешки
+                //Pawn transformation
                 else
                 {
                     char[] fig_lit = { 'Q', 'N', 'R', 'B' };
@@ -314,7 +312,7 @@ namespace Chess_AI_AI_UI
             Canvas.SetLeft(selected_image, Canvas.GetLeft(cell_canvas.Children[cell_id]));
             Canvas.SetBottom(selected_image, Canvas.GetBottom(cell_canvas.Children[cell_id]));
         }
-        //Чёрная пешка превратилась в белого слона (чёрного коня)
+        
         private async void Watch_bvb(object sender, RoutedEventArgs e)
         {
             byte num_1 = 1, num_2 = 2;
@@ -323,7 +321,7 @@ namespace Chess_AI_AI_UI
             reset_but.IsEnabled = true;
             pause_but.IsEnabled = true;
 
-            //Тут цикл, который останавливается при паузе, и после каждого хода небольшая задержка, чтобы можно было нажать резет или паузу
+
             while (!isPause)
             {
                 Tuple<byte, byte, Tuple<DataTypes.MoveInfo, int>> result = BvsB.bvb_game(DataTypes.PartyState.Play, start_color, move_count, num_1, num_2);
@@ -335,7 +333,7 @@ namespace Chess_AI_AI_UI
                 }
                 if (result.Item3.Item1.fig_num != -1)
                 {
-                    //Рокировка
+                    //Castling
                     if (result.Item3.Item1.fig_num == 0)
                     {
                         (int r1, int r2, int cell) = start_color ? (16, 23, 7) : (0, 7, 0);
@@ -351,7 +349,7 @@ namespace Chess_AI_AI_UI
                         }
 
                     }
-                    //Трансформация пешки
+                    //Pawn transformation
                     else
                     {
                         char[] fig_lit = { 'Q', 'N', 'R', 'B' };
@@ -402,7 +400,7 @@ namespace Chess_AI_AI_UI
             bvb_but.IsEnabled = false;
             Fill_Board(true);
             main_canvas.Children.Remove(main_canvas.Children[1]); main_canvas.Children.Remove(main_canvas.Children[0]);
-            //Если я начинаю за чёрных, то первый ходит бот
+            
             char[] fig_lit = { 'Q', 'R', 'N', 'B' };
             char color_lit = start_color ? 'w' : 'b';
             Image[] images = { t_q, t_n, t_r, t_b };
