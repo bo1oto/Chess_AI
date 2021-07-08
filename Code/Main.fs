@@ -10,7 +10,7 @@ open AI.Computing
 open AI.Traininig
  
 
-//Функция, управляющая ходом
+//Move control function
 let get_move (color: bool) (count: byte) (num: byte) = 
     let figures = readFromJSON<FigureData[]> pos_path
     let pos_info = create_position_info figures
@@ -19,7 +19,7 @@ let get_move (color: bool) (count: byte) (num: byte) =
         let mas = readFromJSON<float[][]> (pos_val_path num)
         create_2DArray mas 8
     let king_num = if color then 4 else 20 
-    //Проверка на трансформированных пешек
+    //Checking for transformed pawns
     for i in 0..31 do 
         if figures.[i].figure = Figure.Pawn && figures.[i].state = MoveFeature.Transform then 
             correct_mas_on_Tpawn_w weights_rnn pos_val num (int figures.[i].figure - 1) i
@@ -55,7 +55,7 @@ let get_move (color: bool) (count: byte) (num: byte) =
             PartyState.Dead
         else 
             PartyState.Draw
-//Функция, управляющая партией
+//Game control function
 let rec bvb_game (state: PartyState) (whose_move: bool) (count: byte) ((num_1, num_2): (byte * byte)) =
     match state with
     | PartyState.Play ->
